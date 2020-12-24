@@ -31,6 +31,7 @@ from labelme.widgets import LabelListWidgetItem
 from labelme.widgets import ToolBar
 from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
+from labelme.widgets import ScaleWidget
 
 
 # FIXME
@@ -107,6 +108,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.labelList = LabelListWidget()
         self.lastOpenDir = None
+
+        self.scale_dock = self.scale_widget = None
+        self.scale_dock = QtWidgets.QDockWidget(self.tr("Scale"), self)
+        self.scale_dock.setObjectName("Scale")
+        self.scale_widget = ScaleWidget()
+        self.scale_dock.setWidget(self.scale_widget)
 
         self.flag_dock = self.flag_widget = None
         self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
@@ -188,7 +195,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ["flag_dock", "label_dock", "shape_dock", "file_dock"]:
+        for dock in ["scale_dock", "flag_dock", "label_dock", "shape_dock", "file_dock"]:
             if self._config[dock]["closable"]:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]["floatable"]:
@@ -199,6 +206,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if self._config[dock]["show"] is False:
                 getattr(self, dock).setVisible(False)
 
+        self.addDockWidget(Qt.RightDockWidgetArea, self.scale_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.flag_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
@@ -669,6 +677,7 @@ class MainWindow(QtWidgets.QMainWindow):
         utils.addActions(
             self.menus.view,
             (
+                self.scale_dock.toggleViewAction(),
                 self.flag_dock.toggleViewAction(),
                 self.label_dock.toggleViewAction(),
                 self.shape_dock.toggleViewAction(),
@@ -782,6 +791,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.queueEvent(functools.partial(self.loadFile, self.filename))
 
         # Callbacks:
+        self.zoomWidget.valueChanged.connect(self.updateScale)
         self.zoomWidget.valueChanged.connect(self.paintCanvas)
 
         self.populateModeActions()
@@ -1546,6 +1556,13 @@ class MainWindow(QtWidgets.QMainWindow):
         ):
             self.adjustScale()
         super(MainWindow, self).resizeEvent(event)
+
+    def updateScale(self):
+        scale = self.zoomWidget.value() * 0.01
+        s5 = 5 * scale
+        s50 = 50 * scale
+        s100 = 100 * scale
+        self.scale_widget.updateScale(s5, s50, s100)
 
     def paintCanvas(self):
         assert not self.image.isNull(), "cannot paint null image"
