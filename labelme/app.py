@@ -32,6 +32,7 @@ from labelme.widgets import ToolBar
 from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 from labelme.widgets import ScaleWidget
+from labelme.widgets import BasicShapeWidget
 
 
 # FIXME
@@ -111,9 +112,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.scale_dock = self.scale_widget = None
         self.scale_dock = QtWidgets.QDockWidget(self.tr("Scale"), self)
-        self.scale_dock.setObjectName("Scale")
+        self.scale_dock.setObjectName(self.tr("Scale"))
         self.scale_widget = ScaleWidget()
         self.scale_dock.setWidget(self.scale_widget)
+
+        self.basic_shape_dock = self.basic_shape_widget = None
+        self.basic_shape_dock = QtWidgets.QDockWidget(self.tr("Basic Shapes"), self)
+        self.basic_shape_dock.setObjectName((self.tr("Basic Shapes")))
+        self.basic_shape_widget = BasicShapeWidget()
+        self.basic_shape_dock.setWidget(self.basic_shape_widget)
 
         self.flag_dock = self.flag_widget = None
         self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
@@ -195,7 +202,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ["scale_dock", "flag_dock", "label_dock", "shape_dock", "file_dock"]:
+        for dock in ["scale_dock", "basic_shape_dock", "flag_dock", "label_dock", "shape_dock", "file_dock"]:
             if self._config[dock]["closable"]:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]["floatable"]:
@@ -207,6 +214,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 getattr(self, dock).setVisible(False)
 
         self.addDockWidget(Qt.RightDockWidgetArea, self.scale_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.basic_shape_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.flag_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
@@ -678,6 +686,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.menus.view,
             (
                 self.scale_dock.toggleViewAction(),
+                self.basic_shape_dock.toggleViewAction(),
                 self.flag_dock.toggleViewAction(),
                 self.label_dock.toggleViewAction(),
                 self.shape_dock.toggleViewAction(),

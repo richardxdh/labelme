@@ -19,3 +19,5 @@ from .unique_label_qlist_widget import UniqueLabelQListWidget
 from .zoom_widget import ZoomWidget
 
 from .scale_widget import ScaleWidget
+
+from .basic_shape_widget import BasicShapeWidget

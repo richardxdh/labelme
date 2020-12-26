@@ -9,6 +9,8 @@ import yaml
 from qtpy import QtCore
 from qtpy import QtWidgets
 
+CUR_DIR = osp.dirname(osp.abspath(__file__))
+sys.path.append(osp.dirname(CUR_DIR))
 from labelme import __appname__
 from labelme import __version__
 from labelme.app import MainWindow

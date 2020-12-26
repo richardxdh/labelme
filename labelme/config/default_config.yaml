@@ -35,6 +35,11 @@ scale_dock:
   closable: true
   movable: true
   floatable: true
+basic_shape_dock:
+  show: true
+  closable: true
+  movable: true
+  floatable: true
 flag_dock:
   show: true
   closable: true
