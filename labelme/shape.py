@@ -1,8 +1,10 @@
 import copy
 import math
 
+import numpy as np
 from qtpy import QtCore
 from qtpy import QtGui
+from qtpy.QtGui import QPolygonF
 
 import labelme.utils
 
@@ -47,6 +49,8 @@ class Shape(object):
         self.label = label
         self.group_id = group_id
         self.points = []
+        inner_points = np.load('/Users/richard/Downloads/data/test-output/2.npy')
+        self.inner_ponits = [QtCore.QPointF(p[0], p[1]) for p in inner_points]
         self.fill = False
         self.selected = False
         self.shape_type = shape_type
@@ -123,6 +127,34 @@ class Shape(object):
         x2, y2 = pt2.x(), pt2.y()
         return QtCore.QRectF(x1, y1, x2 - x1, y2 - y1)
 
+    def updateInnerPoints(self):
+        outer_rect = self.getRectFromLine(*self.points)
+        inner_polygon = QPolygonF(self.inner_ponits)
+        inner_bounding_rect = inner_polygon.boundingRect()
+        scaleX = outer_rect.width() / inner_bounding_rect.width()
+        scaleY = outer_rect.height() / inner_bounding_rect.height()
+        inner_center = inner_bounding_rect.center()
+        inner_points = [p - inner_center for p in self.inner_ponits]
+        self.inner_ponits = [QtCore.QPointF(p.x()*scaleX, p.y()*scaleY) +
+                             outer_rect.center() for p in inner_points]
+
+    def paintInnerShape(self, painter):
+        if self.inner_ponits:
+            pen = QtGui.QPen(self.select_line_color)
+            pen.setWidth(max(1, int(round(2.0 / self.scale))))
+            pen.setStyle(QtCore.Qt.DashLine)
+            painter.setPen(pen)
+            line_path = QtGui.QPainterPath()
+            vrtx_path = QtGui.QPainterPath()
+            line_path.moveTo(self.inner_ponits[0])
+            for i, p in enumerate(self.inner_ponits):
+                line_path.lineTo(p)
+                self.drawInnerVertex(vrtx_path, i)
+            line_path.lineTo(self.inner_ponits[0])
+            painter.drawPath(line_path)
+            painter.drawPath(vrtx_path)
+            painter.fillPath(vrtx_path, self.vertex_fill_color)
+
     def paint(self, painter):
         if self.points:
             color = (
@@ -141,6 +173,11 @@ class Shape(object):
                 if len(self.points) == 2:
                     rectangle = self.getRectFromLine(*self.points)
                     line_path.addRect(rectangle)
+                    # paint inner shape
+                    if self.inner_ponits:
+                        self.updateInnerPoints()
+                        self.paintInnerShape(painter)
+                        self.fill = False
                 for i in range(len(self.points)):
                     self.drawVertex(vrtx_path, i)
             elif self.shape_type == "circle":
@@ -178,6 +215,11 @@ class Shape(object):
                     else self.fill_color
                 )
                 painter.fillPath(line_path, color)
+
+    def drawInnerVertex(self, path, i):
+        d = self.point_size / self.scale
+        point = self.inner_ponits[i]
+        path.addEllipse(point, d / 2.0, d / 2.0)
 
     def drawVertex(self, path, i):
         d = self.point_size / self.scale

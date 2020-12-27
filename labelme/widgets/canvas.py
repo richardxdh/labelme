@@ -103,6 +103,7 @@ class Canvas(QtWidgets.QWidget):
             "line",
             "point",
             "linestrip",
+            "basicshape",
         ]:
             raise ValueError("Unsupported createMode: %s" % value)
         self._createMode = value
@@ -341,6 +342,9 @@ class Canvas(QtWidgets.QWidget):
                             self.finalise()
                 elif not self.outOfPixmap(pos):
                     # Create new shape.
+                    # TODO
+                    # create Shape object for basicshape
+                    # ...
                     self.current = Shape(shape_type=self.createMode)
                     self.current.addPoint(pos)
                     if self.createMode == "point":
