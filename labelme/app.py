@@ -380,7 +380,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         createBasicShape = action(
             self.tr("Create BasicShape"),
-            lambda: self.toggleDrawMode(False, createMode="basicshape"),
+            lambda: self.toggleDrawMode(False, createMode="resizingshape"),
             shortcuts["create_basicshape"],
             "objects",
             self.tr("Start drawing basic shapes"),
@@ -959,6 +959,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.delete.setEnabled(not drawing)
 
     def toggleDrawMode(self, edit=True, createMode="polygon"):
+        if createMode == "resizingshape":
+            basic_shape_name, basic_shape_points = self.basic_shape_widget.getSelectedBasicShape()
+            if basic_shape_name is None or basic_shape_points is None:
+                QtWidgets.QMessageBox.warning(self,
+                                              self.tr("No basic shape selected"),
+                                              self.tr("Please choose a basic shape first.")
+                                              )
+                return
+            self.canvas.basic_shape_name = basic_shape_name
+            self.canvas.basic_shape_points = basic_shape_points
+        else:
+            self.canvas.basic_shape_name = None
+            self.canvas.basic_shape_points = None
+
         self.canvas.setEditing(edit)
         self.canvas.createMode = createMode
         if edit:
@@ -1018,7 +1032,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(False)
                 self.actions.createBasicShape.setEnabled(True)
-            elif createMode == "basicshape":
+            elif createMode == "resizingshape":
                 self.actions.createMode.setEnabled(True)
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(True)

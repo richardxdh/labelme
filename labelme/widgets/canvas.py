@@ -83,6 +83,8 @@ class Canvas(QtWidgets.QWidget):
         # Set widget options.
         self.setMouseTracking(True)
         self.setFocusPolicy(QtCore.Qt.WheelFocus)
+        self.basic_shape_name = None
+        self.basic_shape_points = None
 
     def fillDrawing(self):
         return self._fill_drawing
@@ -103,7 +105,7 @@ class Canvas(QtWidgets.QWidget):
             "line",
             "point",
             "linestrip",
-            "basicshape",
+            "resizingshape",
         ]:
             raise ValueError("Unsupported createMode: %s" % value)
         self._createMode = value
@@ -208,7 +210,9 @@ class Canvas(QtWidgets.QWidget):
             if self.createMode in ["polygon", "linestrip"]:
                 self.line[0] = self.current[-1]
                 self.line[1] = pos
-            elif self.createMode == "rectangle":
+            elif self.createMode in ["rectangle", "resizingshape"]:
+                if self.current.shape_type != "resizingshape" and self.createMode == "resizingshape":
+                    self.current.switch_to_resizingshape()
                 self.line.points = [self.current[0], pos]
                 self.line.close()
             elif self.createMode == "circle":
@@ -331,9 +335,13 @@ class Canvas(QtWidgets.QWidget):
                         self.line[0] = self.current[-1]
                         if self.current.isClosed():
                             self.finalise()
-                    elif self.createMode in ["rectangle", "circle", "line"]:
+                    elif self.createMode in ["rectangle", "circle", "line", "resizingshape"]:
                         assert len(self.current.points) == 1
                         self.current.points = self.line.points
+                        if self.createMode == "resizingshape":
+                            self.current.inner_points = self.line.inner_points
+                            self.current.last_inner_points = self.line.last_inner_points
+                            self.current.switch_back_to_preshape()
                         self.finalise()
                     elif self.createMode == "linestrip":
                         self.current.addPoint(self.line[1])
@@ -342,9 +350,6 @@ class Canvas(QtWidgets.QWidget):
                             self.finalise()
                 elif not self.outOfPixmap(pos):
                     # Create new shape.
-                    # TODO
-                    # create Shape object for basicshape
-                    # ...
                     self.current = Shape(shape_type=self.createMode)
                     self.current.addPoint(pos)
                     if self.createMode == "point":
@@ -352,6 +357,8 @@ class Canvas(QtWidgets.QWidget):
                     else:
                         if self.createMode == "circle":
                             self.current.shape_type = "circle"
+                        elif self.createMode == "resizingshape":
+                            self.line.switch_to_resizingshape(self.basic_shape_points)
                         self.line.points = [pos, pos]
                         self.setHiding()
                         self.drawingPolygon.emit(True)
@@ -737,7 +744,7 @@ class Canvas(QtWidgets.QWidget):
         self.current.setOpen()
         if self.createMode in ["polygon", "linestrip"]:
             self.line.points = [self.current[-1], self.current[0]]
-        elif self.createMode in ["rectangle", "line", "circle"]:
+        elif self.createMode in ["rectangle", "line", "circle", "resizingshape"]:
             self.current.points = self.current.points[0:1]
         elif self.createMode == "point":
             self.current = None

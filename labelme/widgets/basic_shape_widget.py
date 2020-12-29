@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os.path as osp
+import numpy as np
 
-from PyQt5.QtCore import Qt, QSize
+from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QIcon, QMouseEvent
 from qtpy.QtWidgets import QWidget, QPushButton, QVBoxLayout, QGridLayout, QScrollArea
 from utils.qt import newIcon
+from labelme.logger import logger
 
 
 class BasicShapeButton(QPushButton):
@@ -38,6 +41,8 @@ class BasicShapeWidget(QWidget):
         self.selected_shape_item = None
         self.shape_item_list = None
         self.createSelector()
+        self.basic_shapes = None
+        self.load_basic_shapes()
 
     def basic_shape_changed(self, basic_shape_item):
         for item in self.shape_item_list:
@@ -81,5 +86,11 @@ class BasicShapeWidget(QWidget):
         for item in self.shape_item_list:
             if item.selected:
                 basic_shape_name = item.shape_name
-        return basic_shape_name
+                break
+        return basic_shape_name, self.basic_shapes.get(basic_shape_name, None)
 
+    def load_basic_shapes(self):
+        cur_dir = osp.dirname(osp.abspath(__file__))
+        npz_path = osp.join(osp.dirname(cur_dir), "config", "basic_shapes.npz")
+        self.basic_shapes = dict(np.load(npz_path))
+        logger.info("basic shape name: {}".format(self.basic_shapes.keys()))

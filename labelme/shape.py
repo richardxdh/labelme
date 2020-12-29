@@ -49,8 +49,6 @@ class Shape(object):
         self.label = label
         self.group_id = group_id
         self.points = []
-        inner_points = np.load('/Users/richard/Downloads/data/test-output/2.npy')
-        self.inner_ponits = [QtCore.QPointF(p[0], p[1]) for p in inner_points]
         self.fill = False
         self.selected = False
         self.shape_type = shape_type
@@ -74,6 +72,10 @@ class Shape(object):
 
         self.shape_type = shape_type
 
+        self.inner_points = None
+        self.last_inner_points = None
+        self.resizing_box_points = None
+
     @property
     def shape_type(self):
         return self._shape_type
@@ -89,6 +91,7 @@ class Shape(object):
             "line",
             "circle",
             "linestrip",
+            "resizingshape",
         ]:
             raise ValueError("Unexpected shape_type: {}".format(value))
         self._shape_type = value
@@ -129,28 +132,41 @@ class Shape(object):
 
     def updateInnerPoints(self):
         outer_rect = self.getRectFromLine(*self.points)
-        inner_polygon = QPolygonF(self.inner_ponits)
-        inner_bounding_rect = inner_polygon.boundingRect()
-        scaleX = outer_rect.width() / inner_bounding_rect.width()
-        scaleY = outer_rect.height() / inner_bounding_rect.height()
-        inner_center = inner_bounding_rect.center()
-        inner_points = [p - inner_center for p in self.inner_ponits]
-        self.inner_ponits = [QtCore.QPointF(p.x()*scaleX, p.y()*scaleY) +
+        # inner_polygon = QPolygonF(self.inner_points)
+        # inner_bounding_rect = inner_polygon.boundingRect()
+        # scaleX = outer_rect.width() / inner_bounding_rect.width()
+        # scaleY = outer_rect.height() / inner_bounding_rect.height()
+        # inner_center = inner_bounding_rect.center()
+        # inner_points = [p - inner_center for p in self.inner_points]
+        # inner_points = [QtCore.QPointF(p.x()*scaleX, p.y()*scaleY) +
+        #                 outer_rect.center() for p in inner_points]
+        x1, y1 = self.inner_points.min(axis=0)
+        x2, y2 = self.inner_points.max(axis=0)
+        inner_bounding_rect_width = x2 - x1
+        inner_bounding_rect_height = y2 - y1
+        scaleX = outer_rect.width() / inner_bounding_rect_width
+        scaleY = outer_rect.height() / inner_bounding_rect_height
+        inner_center = ((x1 + x2) / 2, (y1 + y2) / 2)
+        inner_points = self.inner_points - inner_center
+        inner_points = [QtCore.QPointF(p[0]*scaleX, p[1]*scaleY) +
                              outer_rect.center() for p in inner_points]
+        self.last_inner_points = np.array([[p.x(), p.y()] for p in inner_points])
+        return inner_points
 
     def paintInnerShape(self, painter):
-        if self.inner_ponits:
+        if self.inner_points is not None:
+            inner_points = self.updateInnerPoints()
             pen = QtGui.QPen(self.select_line_color)
             pen.setWidth(max(1, int(round(2.0 / self.scale))))
             pen.setStyle(QtCore.Qt.DashLine)
             painter.setPen(pen)
             line_path = QtGui.QPainterPath()
             vrtx_path = QtGui.QPainterPath()
-            line_path.moveTo(self.inner_ponits[0])
-            for i, p in enumerate(self.inner_ponits):
+            line_path.moveTo(inner_points[0])
+            for i, p in enumerate(inner_points):
                 line_path.lineTo(p)
-                self.drawInnerVertex(vrtx_path, i)
-            line_path.lineTo(self.inner_ponits[0])
+                self.drawInnerVertex(vrtx_path, inner_points[i])
+            line_path.lineTo(inner_points[0])
             painter.drawPath(line_path)
             painter.drawPath(vrtx_path)
             painter.fillPath(vrtx_path, self.vertex_fill_color)
@@ -168,14 +184,13 @@ class Shape(object):
             line_path = QtGui.QPainterPath()
             vrtx_path = QtGui.QPainterPath()
 
-            if self.shape_type == "rectangle":
+            if self.shape_type in ["rectangle", "resizingshape"]:
                 assert len(self.points) in [1, 2]
                 if len(self.points) == 2:
                     rectangle = self.getRectFromLine(*self.points)
                     line_path.addRect(rectangle)
                     # paint inner shape
-                    if self.inner_ponits:
-                        self.updateInnerPoints()
+                    if self.shape_type == "resizingshape" and self.inner_points is not None:
                         self.paintInnerShape(painter)
                         self.fill = False
                 for i in range(len(self.points)):
@@ -216,9 +231,8 @@ class Shape(object):
                 )
                 painter.fillPath(line_path, color)
 
-    def drawInnerVertex(self, path, i):
+    def drawInnerVertex(self, path, point):
         d = self.point_size / self.scale
-        point = self.inner_ponits[i]
         path.addEllipse(point, d / 2.0, d / 2.0)
 
     def drawVertex(self, path, i):
@@ -317,3 +331,30 @@ class Shape(object):
 
     def __setitem__(self, key, value):
         self.points[key] = value
+
+    def switch_to_resizingshape(self, inner_points=None):
+        self.shape_type = "resizingshape"
+        if inner_points is not None:
+            self.inner_points = inner_points
+            self.last_inner_points = inner_points
+        else:
+            self.inner_points = np.array([[p.x(), p.y()] for p in self.points])
+            self.last_inner_points = self.inner_points
+
+        if self.resizing_box_points:
+            self.points = [self.resizing_box_points[0]]
+        else:
+            x1, y1 = self.last_inner_points.min(axis=0)
+            x2, y2 = self.last_inner_points.max(axis=0)
+            self.points = [
+                QtCore.QPointF(x1, y1),
+                QtCore.QPointF(x2, y2),
+            ]
+
+    def switch_back_to_preshape(self):
+        assert self.shape_type == "resizingshape",\
+            "shape_type must be resizingshape while switching back to previous shape"
+        self.shape_type = "polygon"
+        self.resizing_box_points = self.points
+        if self.last_inner_points is not None:
+            self.points = [QtCore.QPointF(p[0], p[1]) for p in self.last_inner_points]
