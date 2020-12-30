@@ -1275,6 +1275,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             return data
 
+        self.canvas.cleanResizableStatus()
         shapes = [format_shape(item.shape()) for item in self.labelList]
         flags = {}
         for i in range(self.flag_widget.count()):

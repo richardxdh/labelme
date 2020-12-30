@@ -332,18 +332,25 @@ class Shape(object):
     def __setitem__(self, key, value):
         self.points[key] = value
 
-    def switch_to_resizingshape(self, inner_points=None):
+    def start_resizing_basicshape(self, inner_points=None):
         self.shape_type = "resizingshape"
         if inner_points is not None:
             self.inner_points = inner_points
-            self.last_inner_points = inner_points
-        else:
-            self.inner_points = np.array([[p.x(), p.y()] for p in self.points])
-            self.last_inner_points = self.inner_points
+            self.last_inner_points = inner_points.copy()
+        if self.resizing_box_points is not None:
+            self.points = [self.resizing_box_points[0],]
 
-        if self.resizing_box_points:
-            self.points = [self.resizing_box_points[0]]
-        else:
+    def stop_resizing_basicshape(self):
+        self.shape_type = "polygon"
+        self.resizing_box_points = self.points
+        self.points = [QtCore.QPointF(p[0], p[1]) for p in self.last_inner_points]
+
+    def start_resizing_polygon(self):
+        if self.shape_type == "polygon":
+            self.shape_type = "resizingshape"
+            self.inner_points = np.array([[p.x(), p.y()] for p in self.points])
+            self.last_inner_points = self.inner_points.copy()
+
             x1, y1 = self.last_inner_points.min(axis=0)
             x2, y2 = self.last_inner_points.max(axis=0)
             self.points = [
@@ -351,10 +358,9 @@ class Shape(object):
                 QtCore.QPointF(x2, y2),
             ]
 
-    def switch_back_to_preshape(self):
-        assert self.shape_type == "resizingshape",\
-            "shape_type must be resizingshape while switching back to previous shape"
-        self.shape_type = "polygon"
-        self.resizing_box_points = self.points
-        if self.last_inner_points is not None:
-            self.points = [QtCore.QPointF(p[0], p[1]) for p in self.last_inner_points]
+    def stop_resizing_polygon(self):
+        if self.shape_type == "resizingshape":
+            self.shape_type = "polygon"
+            if self.last_inner_points is not None:
+                self.points = [QtCore.QPointF(p[0], p[1]) for p in self.last_inner_points]
+

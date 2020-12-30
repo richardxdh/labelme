@@ -211,8 +211,6 @@ class Canvas(QtWidgets.QWidget):
                 self.line[0] = self.current[-1]
                 self.line[1] = pos
             elif self.createMode in ["rectangle", "resizingshape"]:
-                if self.current.shape_type != "resizingshape" and self.createMode == "resizingshape":
-                    self.current.switch_to_resizingshape()
                 self.line.points = [self.current[0], pos]
                 self.line.close()
             elif self.createMode == "circle":
@@ -335,19 +333,22 @@ class Canvas(QtWidgets.QWidget):
                         self.line[0] = self.current[-1]
                         if self.current.isClosed():
                             self.finalise()
-                    elif self.createMode in ["rectangle", "circle", "line", "resizingshape"]:
+                    elif self.createMode in ["rectangle", "circle", "line"]:
                         assert len(self.current.points) == 1
                         self.current.points = self.line.points
-                        if self.createMode == "resizingshape":
-                            self.current.inner_points = self.line.inner_points
-                            self.current.last_inner_points = self.line.last_inner_points
-                            self.current.switch_back_to_preshape()
                         self.finalise()
                     elif self.createMode == "linestrip":
                         self.current.addPoint(self.line[1])
                         self.line[0] = self.current[-1]
                         if int(ev.modifiers()) == QtCore.Qt.ControlModifier:
                             self.finalise()
+                    elif self.createMode == "resizingshape":
+                        assert len(self.current.points) == 1
+                        self.current.points = self.line.points
+                        self.current.inner_points = self.line.inner_points
+                        self.current.last_inner_points = self.line.last_inner_points
+                        self.current.stop_resizing_basicshape()
+                        self.finalise()
                 elif not self.outOfPixmap(pos):
                     # Create new shape.
                     self.current = Shape(shape_type=self.createMode)
@@ -358,15 +359,22 @@ class Canvas(QtWidgets.QWidget):
                         if self.createMode == "circle":
                             self.current.shape_type = "circle"
                         elif self.createMode == "resizingshape":
-                            self.line.switch_to_resizingshape(self.basic_shape_points)
+                            self.line.start_resizing_basicshape(self.basic_shape_points)
                         self.line.points = [pos, pos]
                         self.setHiding()
                         self.drawingPolygon.emit(True)
                         self.update()
             else:
+                if not self.selectedVertex():
+                    self.cleanResizableStatus()
+
                 group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
                 self.selectShapePoint(pos, multiple_selection_mode=group_mode)
                 self.prevPoint = pos
+
+                if not self.selectedVertex():
+                    self.setTopShapeResizable()
+
                 self.repaint()
         elif ev.button() == QtCore.Qt.RightButton and self.editing():
             group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
@@ -744,10 +752,12 @@ class Canvas(QtWidgets.QWidget):
         self.current.setOpen()
         if self.createMode in ["polygon", "linestrip"]:
             self.line.points = [self.current[-1], self.current[0]]
-        elif self.createMode in ["rectangle", "line", "circle", "resizingshape"]:
+        elif self.createMode in ["rectangle", "line", "circle"]:
             self.current.points = self.current.points[0:1]
         elif self.createMode == "point":
             self.current = None
+        elif self.createMode == "resizingshape":
+            self.current.start_resizing_basicshape()
         self.drawingPolygon.emit(True)
 
     def undoLastPoint(self):
@@ -796,3 +806,13 @@ class Canvas(QtWidgets.QWidget):
         self.pixmap = None
         self.shapesBackups = []
         self.update()
+
+    def cleanResizableStatus(self):
+        for shape in self.shapes:
+            shape.stop_resizing_polygon()
+
+    def setTopShapeResizable(self):
+        for shape in self.selectedShapes:
+            shape.start_resizing_polygon()
+            # only set the top shape to resizing status
+            break
