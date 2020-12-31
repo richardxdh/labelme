@@ -19,14 +19,14 @@ def extract_shape_from_labelme_json(labelme_json, labels):
 
 if __name__ == "__main__":
 
-    json_path = osp.expanduser("~/Downloads/data/disco/issue_1218/S11/20201218T111146/S11_1/2.json")
+    json_path = osp.expanduser("~/Downloads/data/imei-sticker/sticker-dataset/EV+2.3/7948/2.json")
     npz_path = osp.expanduser("~/code/github/labelme/labelme/config/basic_shapes.npz")
 
     shapes = {}
     if osp.exists(npz_path):
         shapes = dict(np.load(npz_path))
 
-    new_shape = extract_shape_from_labelme_json(json_path, ["apple body",])
+    new_shape = extract_shape_from_labelme_json(json_path, ["apple", "apple stem", "round rectangle", "surface A"])
     shapes.update(new_shape)
 
     np.savez(npz_path, **shapes)
@@ -35,3 +35,5 @@ if __name__ == "__main__":
     for f in npz_shape.files:
         d = npz_shape[f]
         print(f, type(d), d.shape, d.dtype)
+
+    print(shapes.keys())

@@ -121,6 +121,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.basic_shape_dock.setObjectName((self.tr("Basic Shapes")))
         self.basic_shape_widget = BasicShapeWidget()
         self.basic_shape_dock.setWidget(self.basic_shape_widget)
+        self.basic_shape_widget.basicShapeChanged.connect(self.basicShapeChanged)
 
         self.flag_dock = self.flag_widget = None
         self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
@@ -378,14 +379,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Start drawing linestrip. Ctrl+LeftClick ends creation."),
             enabled=False,
         )
-        createBasicShape = action(
-            self.tr("Create BasicShape"),
-            lambda: self.toggleDrawMode(False, createMode="resizingshape"),
-            shortcuts["create_basicshape"],
-            "objects",
-            self.tr("Start drawing basic shapes"),
-            enabled=False,
-        )
+        # createBasicShape = action(
+        #     self.tr("Create BasicShape"),
+        #     lambda: self.toggleDrawMode(False, createMode="resizingshape"),
+        #     shortcuts["create_basicshape"],
+        #     "objects",
+        #     self.tr("Start drawing basic shapes"),
+        #     enabled=False,
+        # )
+        createBasicShape = self.createBasicShapeMenu()
         editMode = action(
             self.tr("Edit Polygons"),
             self.setEditMode,
@@ -958,20 +960,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.undo.setEnabled(not drawing)
         self.actions.delete.setEnabled(not drawing)
 
-    def toggleDrawMode(self, edit=True, createMode="polygon"):
-        if createMode == "resizingshape":
-            basic_shape_name, basic_shape_points = self.basic_shape_widget.getSelectedBasicShape()
-            if basic_shape_name is None or basic_shape_points is None:
-                QtWidgets.QMessageBox.warning(self,
-                                              self.tr("No basic shape selected"),
-                                              self.tr("Please choose a basic shape first.")
-                                              )
-                return
-            self.canvas.basic_shape_name = basic_shape_name
-            self.canvas.basic_shape_points = basic_shape_points
-        else:
-            self.canvas.basic_shape_name = None
-            self.canvas.basic_shape_points = None
+    def toggleDrawMode(self, edit=True, createMode="polygon", basic_shape=None):
+        # if createMode == "resizingshape":
+        #     basic_shape_name, basic_shape_points = self.basic_shape_widget.getSelectedBasicShape()
+        #     if basic_shape_name is None or basic_shape_points is None:
+        #         QtWidgets.QMessageBox.warning(self,
+        #                                       self.tr("No basic shape selected"),
+        #                                       self.tr("Please choose a basic shape first.")
+        #                                       )
+        #         return
+        #     self.canvas.basic_shape_name = basic_shape_name
+        #     self.canvas.basic_shape_points = basic_shape_points
+        # else:
+        #     self.canvas.basic_shape_name = None
+        #     self.canvas.basic_shape_points = None
 
         self.canvas.setEditing(edit)
         self.canvas.createMode = createMode
@@ -1039,7 +1041,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createLineMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(True)
-                self.actions.createBasicShape.setEnabled(False)
+                self.actions.createBasicShape.setEnabled(False, basic_shape)
             else:
                 raise ValueError("Unsupported createMode: %s" % createMode)
         self.actions.editMode.setEnabled(not edit)
@@ -2068,3 +2070,62 @@ class MainWindow(QtWidgets.QMainWindow):
                     images.append(relativePath)
         images.sort(key=lambda x: x.lower())
         return images
+
+    def createBasicShapeMenu(self):
+        basicShapeMenu = QtWidgets.QMenu(self.tr("Create BasicShape"))
+        basicShapeMenu.setIcon(utils.newIcon("objects"))
+
+        action = functools.partial(utils.newAction, self)
+        shapeApple = action(
+            self.tr("apple"),
+            lambda: self.toggleDrawMode(False, createMode="resizingshape", basic_shape="apple"),
+            None, None, self.tr("Start drawing {}").format(self.tr("apple")), enabled=False,
+        )
+        basicShapeMenu.addAction(shapeApple)
+
+        shapeAppleStem = action(
+            self.tr("apple stem"),
+            lambda: self.toggleDrawMode(False, createMode="resizingshape", basic_shape="apple stem"),
+            None, None, self.tr("Start drawing {}").format(self.tr("apple stem")), enabled=False,
+        )
+        basicShapeMenu.addAction(shapeAppleStem)
+
+        shapeRoundRect = action(
+            self.tr("round rectangle"),
+            lambda: self.toggleDrawMode(False, createMode="resizingshape", basic_shape="round rectangle"),
+            None, None, self.tr("Start drawing {}").format(self.tr("round rectangle")), enabled=False,
+        )
+        basicShapeMenu.addAction(shapeRoundRect)
+
+        shapeSurfaceA = action(
+            self.tr("surface A"),
+            lambda: self.toggleDrawMode(False, createMode="resizingshape", basic_shape="surface A"),
+            None, None, self.tr("Start drawing {}").format(self.tr("surface A")), enabled=False,
+        )
+        basicShapeMenu.addAction(shapeSurfaceA)
+
+        # for item in self.basic_shape_widget.shape_item_list:
+        #     shape = action(
+        #         item.shape_name,
+        #         lambda: self.toggleDrawMode(False, createMode="resizingshape", basic_shape=item.shape_name),
+        #         None, None, self.tr("Start drawing {}").format(item.shape_name), enabled=False,
+        #     )
+        #     basicShapeMenu.addAction(shape)
+
+        def setBasicShapeMenuEnabled(menu, enabled, basic_shape=None):
+            for action in menu.actions():
+                if action.text() == basic_shape:
+                    action.setEnabled(False)
+                else:
+                    action.setEnabled(True)
+
+            self.basic_shape_widget.basicShapeChangedFromMenu(basic_shape)
+            basic_shape_name, basic_shape_points = self.basic_shape_widget.getSelectedBasicShape()
+            self.canvas.basic_shape_name = basic_shape_name
+            self.canvas.basic_shape_points = basic_shape_points
+
+        basicShapeMenu.setEnabled = functools.partial(setBasicShapeMenuEnabled, basicShapeMenu)
+        return basicShapeMenu
+
+    def basicShapeChanged(self, shape_name):
+        self.toggleDrawMode(False, createMode="resizingshape", basic_shape=shape_name)

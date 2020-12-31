@@ -365,15 +365,13 @@ class Canvas(QtWidgets.QWidget):
                         self.drawingPolygon.emit(True)
                         self.update()
             else:
-                if not self.selectedVertex():
-                    self.cleanResizableStatus()
+                self.cleanResizableStatus(pos)
 
                 group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
                 self.selectShapePoint(pos, multiple_selection_mode=group_mode)
                 self.prevPoint = pos
 
-                if not self.selectedVertex():
-                    self.setTopShapeResizable()
+                self.setTopShapeResizable()
 
                 self.repaint()
         elif ev.button() == QtCore.Qt.RightButton and self.editing():
@@ -807,9 +805,17 @@ class Canvas(QtWidgets.QWidget):
         self.shapesBackups = []
         self.update()
 
-    def cleanResizableStatus(self):
-        for shape in self.shapes:
-            shape.stop_resizing_polygon()
+    def cleanResizableStatus(self, pos=None):
+        if pos is None:
+            for shape in self.shapes:
+                shape.stop_resizing_polygon()
+
+        else:
+            for shape in self.shapes:
+                if shape.shape_type == "resizingshape" and \
+                        not shape.containsPoint(pos) and \
+                        shape.nearestVertex(pos, self.epsilon/self.scale) is None:
+                    shape.stop_resizing_polygon()
 
     def setTopShapeResizable(self):
         for shape in self.selectedShapes:

@@ -3,6 +3,7 @@
 import os.path as osp
 import numpy as np
 
+from qtpy import QtCore
 from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QIcon, QMouseEvent
 from qtpy.QtWidgets import QWidget, QPushButton, QVBoxLayout, QGridLayout, QScrollArea
@@ -16,7 +17,7 @@ class BasicShapeButton(QPushButton):
         super(BasicShapeButton, self).__init__(parent)
         self.shape_name = shape_name
         self.icon = icon
-        self.setIcon(newIcon("{}_unselected".format(self.icon)))
+        self.setIcon(newIcon("{}_unselected".format(self.icon), "svg"))
         self.setIconSize(QSize(48, 48))
         self.setFixedSize(48, 48)
         self.setToolTip(btn_tip)
@@ -26,15 +27,18 @@ class BasicShapeButton(QPushButton):
     def changeStatus(self, selected):
         self.selected = selected
         if self.selected:
-            self.setIcon(newIcon("{}_selected".format(self.icon)))
+            self.setIcon(newIcon("{}_selected".format(self.icon), "svg"))
         else:
-            self.setIcon(newIcon("{}_unselected".format(self.icon)))
+            self.setIcon(newIcon("{}_unselected".format(self.icon), "svg"))
 
     def mousePressEvent(self, e: QMouseEvent):
-        self.callback(self)
+        if self.selected is False:
+            self.callback(self.shape_name)
 
 
 class BasicShapeWidget(QWidget):
+
+    basicShapeChanged = QtCore.Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -44,30 +48,35 @@ class BasicShapeWidget(QWidget):
         self.basic_shapes = None
         self.load_basic_shapes()
 
-    def basic_shape_changed(self, basic_shape_item):
-        for item in self.shape_item_list:
-            if item.shape_name == basic_shape_item.shape_name:
-                item.changeStatus(not item.selected)
-            elif item.selected:
-                item.changeStatus(False)
+    def basic_shape_changed(self, shape_name):
+        # clicked_shape_name = None
+        # selected = False
+        # for item in self.shape_item_list:
+        #     if item.shape_name == shape_name:
+        #         item.changeStatus(not item.selected)
+        #         clicked_shape_name = shape_name
+        #         selected = item.selected
+        #     elif item.selected:
+        #         item.changeStatus(False)
+        self.basicShapeChanged.emit(shape_name)
 
     def createSelector(self):
         # create shape items
-        item_round_rectangle = BasicShapeButton(self, "round_rectangle", "round_rectangle", "round rectangle",
+        item_round_rectangle = BasicShapeButton(self, "round rectangle", "round_rectangle", "round rectangle",
                                                 self.basic_shape_changed)
-        item_surface_A = BasicShapeButton(self, "surface_A", "surface_A", "surface A", self.basic_shape_changed)
-        item_logo_apple_stalk = BasicShapeButton(self, "apple_stalk", "logo_apple_stalk", "logo apple stalk",
+        item_surface_A = BasicShapeButton(self, "surface A", "surface_A", "surface A", self.basic_shape_changed)
+        item_logo_apple_stem = BasicShapeButton(self, "apple stem", "logo_apple_stem", "logo apple stem",
                                                  self.basic_shape_changed)
-        item_logo_apple_body = BasicShapeButton(self, "apple body", "logo_apple_body", "logo apple body",
+        item_logo_apple = BasicShapeButton(self, "apple", "logo_apple", "logo apple",
                                                 self.basic_shape_changed)
-        self.shape_item_list = [item_round_rectangle, item_surface_A, item_logo_apple_stalk, item_logo_apple_body]
+        self.shape_item_list = [item_logo_apple, item_logo_apple_stem, item_round_rectangle, item_surface_A, ]
 
         # create layout
         layout = QGridLayout(self)
-        layout.addWidget(item_round_rectangle, 0, 0)
-        layout.addWidget(item_surface_A, 0, 1)
-        layout.addWidget(item_logo_apple_stalk, 0, 2)
-        layout.addWidget(item_logo_apple_body, 0, 3)
+        layout.addWidget(item_logo_apple, 0, 0)
+        layout.addWidget(item_logo_apple_stem, 0, 1)
+        layout.addWidget(item_round_rectangle, 0, 2)
+        layout.addWidget(item_surface_A, 0, 3)
 
         shape_items = QWidget(self)
         shape_items.setLayout(layout)
@@ -94,3 +103,10 @@ class BasicShapeWidget(QWidget):
         npz_path = osp.join(osp.dirname(cur_dir), "config", "basic_shapes.npz")
         self.basic_shapes = dict(np.load(npz_path))
         logger.info("basic shape name: {}".format(self.basic_shapes.keys()))
+
+    def basicShapeChangedFromMenu(self, basic_shape_name):
+        for item in self.shape_item_list:
+            if item.shape_name == basic_shape_name:
+                item.changeStatus(True)
+            elif item.selected:
+                item.changeStatus(False)

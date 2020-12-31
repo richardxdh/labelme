@@ -11,9 +11,9 @@ from qtpy import QtWidgets
 here = osp.dirname(osp.abspath(__file__))
 
 
-def newIcon(icon):
+def newIcon(icon, fmt="png"):
     icons_dir = osp.join(here, "../icons")
-    return QtGui.QIcon(osp.join(":/", icons_dir, "%s.png" % icon))
+    return QtGui.QIcon(osp.join(":/", icons_dir, "%s.%s" % (icon, fmt)))
 
 
 def newButton(text, icon=None, slot=None):
