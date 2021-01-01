@@ -47,6 +47,7 @@ class BasicShapeWidget(QWidget):
         self.createSelector()
         self.basic_shapes = None
         self.load_basic_shapes()
+        self.selected_basic_shape_name = None
 
     def basic_shape_changed(self, shape_name):
         # clicked_shape_name = None
@@ -91,12 +92,14 @@ class BasicShapeWidget(QWidget):
         self.setLayout(shape_widget_layout)
 
     def getSelectedBasicShape(self):
-        basic_shape_name = None
-        for item in self.shape_item_list:
-            if item.selected:
-                basic_shape_name = item.shape_name
-                break
-        return basic_shape_name, self.basic_shapes.get(basic_shape_name, None)
+        # basic_shape_name = None
+        # for item in self.shape_item_list:
+        #     if item.selected:
+        #         basic_shape_name = item.shape_name
+        #         break
+        # return self.basic_shape_name, self.basic_shapes.get(basic_shape_name, None)
+        return self.selected_basic_shape_name,\
+               self.basic_shapes.get(self.selected_basic_shape_name, None)
 
     def load_basic_shapes(self):
         cur_dir = osp.dirname(osp.abspath(__file__))
@@ -105,6 +108,7 @@ class BasicShapeWidget(QWidget):
         logger.info("basic shape name: {}".format(self.basic_shapes.keys()))
 
     def basicShapeChangedFromMenu(self, basic_shape_name):
+        self.selected_basic_shape_name = basic_shape_name
         for item in self.shape_item_list:
             if item.shape_name == basic_shape_name:
                 item.changeStatus(True)
