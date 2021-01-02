@@ -4,6 +4,8 @@
 from qtpy import QtWidgets, QtCore
 from qtpy.QtGui import QPainter, QColor, QBrush
 from qtpy.QtWidgets import QDialog, QWidget, QHBoxLayout, QVBoxLayout, QRadioButton, QSpinBox
+from qtpy.QtCore import QPoint
+from qtpy.QtGui import QTransform, QPolygonF, QPen
 
 
 class AngleBar(QWidget):
@@ -21,13 +23,13 @@ class AngleBar(QWidget):
     def calcRotateInfo(self, ev):
         pos = ev.localPos()
         mouse_posx = int(pos.x())
-        if mouse_posx < 0:
-            mouse_posx = 0
-        elif mouse_posx > 360:
-            mouse_posx = 360
         angle_zero = self.width() / 2
         self.rotate_clockwise = mouse_posx > angle_zero
         self.rotate_angle = int(abs(mouse_posx - angle_zero) * 360 / angle_zero)
+        if self.rotate_angle < 0:
+            self.rotate_angle = 0
+        elif self.rotate_angle > 360:
+            self.rotate_angle = 360
         self.updateRotateInfoCB(self.rotate_clockwise, self.rotate_angle)
         self.repaint()
 
@@ -72,10 +74,11 @@ class AngleBar(QWidget):
 
 class RotateLabelDlg(QDialog):
 
-    rotateLabel = QtCore.Signal(bool, int)
+    rotateSelectedPolygon = QtCore.Signal(bool, int)
 
     def __init__(self, parent=None, clockwise=True, angle=0):
         super(RotateLabelDlg, self).__init__(parent)
+        self.setWindowTitle(self.tr("Rotate the selected polygon"))
         self.clockwise = clockwise
         self.angle = angle
         self.setLayout(self.createLayout())
@@ -143,7 +146,42 @@ class RotateLabelDlg(QDialog):
             self.appleRotateInfo()
 
     def appleRotateInfo(self):
-        self.rotateLabel.emit(self.clockwise, self.angle)
+        self.rotateSelectedPolygon.emit(self.clockwise, self.angle)
+
+    # def paintEvent(self, ev):
+    #     painter = QPainter()
+    #     painter.begin(self)
+    #
+    #     # [0, 0], [1, 0], [1, 1], [0.5, 1.5], [0, 1]
+    #     a = QPoint(100, 100)
+    #     b = QPoint(200, 100)
+    #     c = QPoint(200, 200)
+    #     d = QPoint(150, 250)
+    #     e = QPoint(100, 200)
+    #     center = QPoint(150, 150)
+    #
+    #     painter.setPen(QPen(QColor(QtCore.Qt.red), 4))
+    #     pointer = QPolygonF([a, b, c, d, e])
+    #     painter.drawPolygon(pointer)
+    #     painter.drawPoint(center)
+    #
+    #     transform = QTransform()
+    #     transform.translate(center.x(), center.y())
+    #     transform.rotate(45)
+    #     transform.translate(-center.x(), -center.y())
+    #
+    #     painter.setPen(QPen(QColor(QtCore.Qt.green), 4))
+    #     pointer = transform.map(pointer)
+    #     painter.drawPolygon(pointer)
+    #     painter.drawPoint(center)
+    #
+    #     painter.setPen(QPen(QColor(QtCore.Qt.blue), 4))
+    #     for i, p in enumerate(pointer):
+    #         painter.drawText(p, str(i))
+    #
+    #     painter.end()
+    #
+    #     pass
 
 if __name__ == "__main__":
     import sys

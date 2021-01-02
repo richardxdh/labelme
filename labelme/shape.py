@@ -75,6 +75,8 @@ class Shape(object):
         self.inner_points = None
         self.last_inner_points = None
         self.resizing_box_points = None
+        self.rotating_points = None
+        self.rotating_center = None
 
     @property
     def shape_type(self):
@@ -363,4 +365,30 @@ class Shape(object):
             self.shape_type = "polygon"
             if self.last_inner_points is not None:
                 self.points = [QtCore.QPointF(p[0], p[1]) for p in self.last_inner_points]
+
+    def startRotatePolygon(self):
+        self.rotating_points = self.points.copy()
+        # points = np.array([[p.x(), p.y()] for p in self.points])
+        # x1, y1 = points.min(axis=0)
+        # x2, y2 = points.max(axis=0)
+        # cx, cy = ((x1 + x2) / 2, (y1 + y2) / 2)
+        rect = self.boundingRect()
+        cx = rect.x() + rect.width() // 2
+        cy = rect.y() + rect.height() // 2
+        self.rotating_center = (cx, cy)
+
+    def rotatePolygon(self, clockwise, angle):
+        if self.shape_type == "polygon":
+
+            if clockwise is False:
+                angle = -angle
+
+            transform = QtGui.QTransform()
+            transform.translate(self.rotating_center[0], self.rotating_center[1])
+            transform.rotate(angle)
+            transform.translate(-self.rotating_center[0], -self.rotating_center[1])
+
+            polygon = QtGui.QPolygonF(self.rotating_points)
+            rotated_polygon = transform.map(polygon)
+            self.points = [QtCore.QPointF(int(p.x()), int(p.y())) for p in rotated_polygon]
 
