@@ -33,7 +33,6 @@ from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 from labelme.widgets import ScaleWidget
 from labelme.widgets import BasicShapeWidget
-from labelme.widgets import RotateLabelDlg
 
 
 # FIXME
@@ -2146,23 +2145,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.toggleDrawMode(False, createMode="resizingshape", basic_shape=shape_name)
 
     def showRotateDlg(self):
-        if len(self.canvas.selectedShapes) == 1:
-            shape = self.canvas.selectedShapes[0]
-            if shape.shape_type == "polygon":
+        scrollArea = self.centralWidget()
+        topRight = scrollArea.mapToGlobal(scrollArea.geometry().topRight())
+        self.canvas.showRotateDlg(topRight)
 
-                canvasRect = self.canvas.geometry()
-                topRight = self.canvas.mapToGlobal(canvasRect.topRight())
-                dlg = RotateLabelDlg(self)
-                dlg.rotateSelectedPolygon.connect(self.rotateSelectedPolygon)
-                dlg.setFixedSize(400, 100)
-                dlg.move(topRight.x() - 400, topRight.y())
-
-                shape.startRotatePolygon()
-                dlg.show()
-
-    def rotateSelectedPolygon(self, clockwise, angle):
-        if len(self.canvas.selectedShapes) == 1:
-            shape = self.canvas.selectedShapes[0]
-            if shape.shape_type == "polygon":
-                shape.rotatePolygon(clockwise, angle)
-                self.canvas.repaint()

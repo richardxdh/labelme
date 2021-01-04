@@ -21,5 +21,3 @@ from .zoom_widget import ZoomWidget
 from .scale_widget import ScaleWidget
 
 from .basic_shape_widget import BasicShapeWidget
-
-from .rotate_label_dlg import RotateLabelDlg

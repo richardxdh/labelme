@@ -76,12 +76,24 @@ class RotateLabelDlg(QDialog):
 
     rotateSelectedPolygon = QtCore.Signal(bool, int)
 
-    def __init__(self, parent=None, clockwise=True, angle=0):
+    def __init__(self, parent=None, rotation_connection=None, clockwise=True, angle=0):
         super(RotateLabelDlg, self).__init__(parent)
         self.setWindowTitle(self.tr("Rotate the selected polygon"))
+        if rotation_connection is not None:
+            self.rotateSelectedPolygon.connect(rotation_connection)
         self.clockwise = clockwise
         self.angle = angle
         self.setLayout(self.createLayout())
+        self.setFixedSize(400, 80)
+
+    def resetRotateDlg(self, parent_topright):
+        self.clockwise = True
+        self.angle = 0
+        self.radio_clockwise.setChecked(self.clockwise)
+        self.angle_editor.setValue(self.angle)
+        self.rotate_bar.updateRotationInfo(self.clockwise, self.angle)
+        size = self.size()
+        self.move(parent_topright.x() - size.width(), parent_topright.y())
 
     def createLayout(self):
         hbox = QHBoxLayout()

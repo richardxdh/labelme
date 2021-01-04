@@ -6,6 +6,8 @@ from labelme import QT5
 from labelme.shape import Shape
 import labelme.utils
 
+from .rotate_label_dlg import RotateLabelDlg
+
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
@@ -85,6 +87,7 @@ class Canvas(QtWidgets.QWidget):
         self.setFocusPolicy(QtCore.Qt.WheelFocus)
         self.basic_shape_name = None
         self.basic_shape_points = None
+        self.rotateDlg = RotateLabelDlg(self, self.rotateSelectedPolygon)
 
     def fillDrawing(self):
         return self._fill_drawing
@@ -320,6 +323,7 @@ class Canvas(QtWidgets.QWidget):
         self.movingShape = True  # Save changes
 
     def mousePressEvent(self, ev):
+        self.rotateDlg.close()
         if QT5:
             pos = self.transformPos(ev.localPos())
         else:
@@ -374,7 +378,8 @@ class Canvas(QtWidgets.QWidget):
                 self.setTopShapeResizable()
 
                 self.repaint()
-        elif ev.button() == QtCore.Qt.RightButton and self.editing():
+        elif ev.button() == QtCore.Qt.RightButton: # and self.editing():
+            self.cleanResizableStatus()
             group_mode = int(ev.modifiers()) == QtCore.Qt.ControlModifier
             self.selectShapePoint(pos, multiple_selection_mode=group_mode)
             self.prevPoint = pos
@@ -822,3 +827,23 @@ class Canvas(QtWidgets.QWidget):
             shape.start_resizing_polygon()
             # only set the top shape to resizing status
             break
+
+    def showRotateDlg(self, topRight):
+        if len(self.selectedShapes) == 1:
+            shape = self.selectedShapes[0]
+            if shape.shape_type == "polygon":
+                shape.startRotatePolygon()
+                # canvasRect = self.geometry()
+                # topRight = self.mapToGlobal(canvasRect.topRight())
+                self.rotateDlg.resetRotateDlg(topRight)
+                self.rotateDlg.show()
+
+    def rotateSelectedPolygon(self, clockwise, angle):
+        if len(self.selectedShapes) == 1:
+            shape = self.selectedShapes[0]
+            if shape.shape_type == "polygon":
+                shape.rotatePolygon(clockwise, angle)
+                self.repaint()
+                # to save rotation change
+                self.storeShapes()
+                self.shapeMoved.emit()
